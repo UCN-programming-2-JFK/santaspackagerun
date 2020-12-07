@@ -34,7 +34,7 @@ public class GamePanel extends JPanel implements KeyListener {
 	MovingSprite sleigh;
 	ArrayList<MovingSprite> coronaCreatures = new ArrayList<>();
 	int numberOfCottagesOnScreen = 2;
-	private int updatesPerSecond = 30;
+	private int updatesPerSecond = 25;
 	private int millisecDelay = 1000 / updatesPerSecond;
 	private double nextUpdate;
 	private double lastUpdate;
@@ -111,7 +111,7 @@ public class GamePanel extends JPanel implements KeyListener {
 				update(msElapsedSinceLastUpdate);
 				repaint();
 
-				System.out.println(msElapsedSinceLastUpdate);
+				//System.out.println(msElapsedSinceLastUpdate);
 			}
 		}
 	}
@@ -336,7 +336,6 @@ public class GamePanel extends JPanel implements KeyListener {
 			}
 		    coronaCreature.getPosition().x = furthestPositionRight + coronaCreatureSpacing / 2  + rnd.nextInt(coronaCreatureSpacing / 2);
 		    coronaCreature.getPosition().y =  rnd.nextInt(getHeight()/3)+80 + sleigh.getHeight();
-System.out.println(coronaCreature.getPosition());
 		}		
 	}
 	
