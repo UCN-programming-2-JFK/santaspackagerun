@@ -1,10 +1,11 @@
 import java.awt.*;
 import java.awt.geom.Point2D;
+import java.awt.image.BufferedImage;
 
 public class MovingSprite  {
 	
 	private Point2D.Float position, movement;
-	private Image image;
+	private BufferedImage image;
 	
 	public int getWidth() {
 		return getImage().getWidth(null);
@@ -30,15 +31,15 @@ public class MovingSprite  {
 		this.movement = movement;
 	}
 	
-	public Image getImage() {
+	public BufferedImage getImage() {
 		return image;
 	}
 
-	public void setImage(Image image) {
+	public void setImage(BufferedImage image) {
 		this.image = image;
 	}
 
-	public MovingSprite(Point2D.Float position, Point2D.Float movement, Image image) {
+	public MovingSprite(Point2D.Float position, Point2D.Float movement, BufferedImage image) {
 		this.setPosition(position);
 		this.setMovement(movement);
 		this.setImage(image);

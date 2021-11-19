@@ -1,40 +1,34 @@
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.Point;
-import java.awt.RenderingHints;
-import java.awt.event.KeyEvent;
+import java.awt.*;
+import java.util.*;
+import java.awt.event.*;
 import java.awt.event.KeyListener;
 import java.awt.geom.Point2D;
-import java.awt.geom.Point2D.Float;
+import java.awt.image.BufferStrategy;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Random;
-
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 import javax.swing.JComboBox.KeySelectionManager;
+import javax.swing.JFrame;
 
 public class GamePanel extends JPanel implements KeyListener {
 
 	private enum GameState {
 		Title, Playing, GameOver
 	}
+	
 
 	ArrayList<Point2D.Float> snowflakePositions = new ArrayList<>();
 	Color backgroundColor = new Color(208, 244, 247);
-	Image tileableMountainBackground, tileableTreelineImage, titleImage, snowflake_8_Image, cottageImage, smokeImage, sleighImage, giftboxImage, coronaImage;
+	BufferedImage tileableMountainBackground, tileableTreelineImage, titleImage, snowflake_8_Image, cottageImage, smokeImage, sleighImage, giftboxImage, coronaImage;
 	float[] backgroundOffsets = new float[3];
-	Image[] backgroundImages = new Image[3];
+	BufferedImage[] backgroundImages = new BufferedImage[3];
 	Random rnd = new Random();
 	int points = 0;
 	MovingSprite sleigh;
 	ArrayList<MovingSprite> coronaCreatures = new ArrayList<>();
 	int numberOfCottagesOnScreen = 2;
-	private int updatesPerSecond = 25;
+	private int updatesPerSecond = 60;
 	private int millisecDelay = 1000 / updatesPerSecond;
 	private double nextUpdate;
 	private double lastUpdate;
@@ -42,6 +36,7 @@ public class GamePanel extends JPanel implements KeyListener {
 	ArrayList<Point2D.Float> cottagePositions = new ArrayList<>();
 	ArrayList<MovingSprite> giftboxes = new ArrayList<>();
 	Font font = new Font("Impact", Font.PLAIN, 32);
+	//BufferedImage drawImage;
 
 	private GameState gameState = GameState.Title;
 	public GameState getGameState() {return gameState;}
@@ -50,16 +45,20 @@ public class GamePanel extends JPanel implements KeyListener {
 	public GamePanel() {
 		loadContent();
 		addKeyListener(this);
+		setDoubleBuffered(true);
+		setIgnoreRepaint(true);
+		
 	}
 	
 	public void loadContent() {
+		setIgnoreRepaint(true);
 		tileableMountainBackground = loadImage("/gradient_tileable_mountain_.png");
 		tileableTreelineImage = loadImage("/tileable_treeline.png");
 		titleImage = loadImage("/title_640.png");
 		snowflake_8_Image = loadImage("/snowflake_8.png");
 		cottageImage = loadImage("/cottage_128px.png");
 		smokeImage = loadImage("/smoke.png");
-		sleighImage = loadImage("/sleigh_128.png");
+		sleighImage = loadImage("/sleigh_96.png");
 		giftboxImage= loadImage("/giftbox_32.png");
 		coronaImage= loadImage("/corona_64px.png");
 		sleigh = new MovingSprite(new Point2D.Float(200, 200), new Point2D.Float(), sleighImage);
@@ -84,20 +83,17 @@ public class GamePanel extends JPanel implements KeyListener {
 			cottagePositions.add(position);
 		}
 	}
-	
-	
 
-
+	long lastPaint = 0;
 	public void run() {
-
+		
+		((JFrame)getTopLevelAncestor()).createBufferStrategy(2);
+		BufferStrategy myStrategy =		((JFrame)getTopLevelAncestor()).getBufferStrategy(); 
+		Graphics g = null;
 		createSnow();
 		positionCottages();
-
-
 		lastUpdate = nextUpdate = System.currentTimeMillis();
-
 		while (true) {
-			repaint();
 
 			double currentTimeMillis = System.currentTimeMillis();
 			if (nextUpdate <= currentTimeMillis) {
@@ -109,16 +105,28 @@ public class GamePanel extends JPanel implements KeyListener {
 				nextUpdate = lastUpdate + msBeforeNextUpdate;
 				
 				update(msElapsedSinceLastUpdate);
-				repaint();
+				
 
-				//System.out.println(msElapsedSinceLastUpdate);
+				    try {
+				        g = myStrategy.getDrawGraphics();
+				        render(g);
+				    } finally {
+				    	if(g!= null)
+				        g.dispose();
+				    }
+				    myStrategy.show();
+				}
+				
+			//	System.out.println(msElapsedSinceLastUpdate);
 			}
-		}
+		
 	}
 	
+	public void render(Graphics g){
 
-	public void paint(Graphics g) {
-		Graphics2D g2d = (Graphics2D) g;
+		long msSinceLastPaint = System.currentTimeMillis() - lastPaint;
+		System.out.println(msSinceLastPaint);
+		Graphics2D g2d = (Graphics2D)g;
 		g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 //		g2d.setColor(backgroundColor);
 //		g2d.fillRect(0, 0, g2d.getClipBounds().width, g2d.getClipBounds().height);
@@ -127,11 +135,11 @@ public class GamePanel extends JPanel implements KeyListener {
 		drawCottages(g2d);
 		switch (getGameState()) {
 		case Title:
-			drawLogo(g);
+			drawLogo(g2d);
 
 			break;
 		case Playing:
-			drawScore(g);
+			drawScore(g2d);
 			for (MovingSprite box : giftboxes) {
 				box.draw(g2d);
 			}
@@ -139,14 +147,15 @@ public class GamePanel extends JPanel implements KeyListener {
 			sleigh.draw(g2d);
 			break;
 		case GameOver:
-			drawScore(g);
+			drawScore(g2d);
 			break;
 		default:
 			break;
 		}
 		drawCoronaCreatures(g2d);
-		drawSnow(g);
-
+		drawSnow(g2d);
+		lastPaint = System.currentTimeMillis();
+	//g.dispose();	
 	}
 
 	private void drawCoronaCreatures(Graphics2D g2d) {
@@ -243,7 +252,7 @@ public class GamePanel extends JPanel implements KeyListener {
 				for (int creatureCounter = coronaCreatures.size() - 1; creatureCounter >= 0; creatureCounter--) {
 					MovingSprite creature = coronaCreatures.get(creatureCounter);
 					Point2D.Float creaturePosition = creature.getPosition();
-					if (Point2D.distance(creaturePosition.x, creaturePosition.y, giftPosition.x, giftPosition.y) < (giftboxImage.getWidth(null) + coronaImage.getWidth(null)) / 2) {
+					if (Point2D.distance(creaturePosition.x, creaturePosition.y, giftPosition.x, giftPosition.y) < (giftboxImage.getWidth(null) + coronaImage.getWidth(null)) / 3) {
 						giftboxes.remove(giftBox);
 						moveCoronaCreatureRightOfScreen(creature);
 						points += 1;
@@ -309,6 +318,7 @@ public class GamePanel extends JPanel implements KeyListener {
 	private void moveCottages(double msElapsedSinceLastUpdate) {
 		for (Point2D.Float p : cottagePositions) {
 			double amountToMove = .04 * 3.5 * msElapsedSinceLastUpdate;
+			System.out.println((int)amountToMove);
 			p.x -= amountToMove;
 
 			if (p.x < -200) {
@@ -358,6 +368,7 @@ public class GamePanel extends JPanel implements KeyListener {
 	private void moveBackground(double msElapsedSinceLastUpdate) {
 		for (int i = 0; i < backgroundOffsets.length; i++) {
 			backgroundOffsets[i] += .04 * (i + 1) * msElapsedSinceLastUpdate;
+			//backgroundOffsets[i] += 1*i;
 			backgroundOffsets[i] %= backgroundImages[i].getWidth(null);
 		}
 	}
@@ -375,8 +386,8 @@ public class GamePanel extends JPanel implements KeyListener {
 		}
 	}
 
-	private Image loadImage(String imagePathOrUrl) {
-		Image image = null;
+	private BufferedImage loadImage(String imagePathOrUrl) {
+		BufferedImage image = null;
 		try {
 			image = ImageIO.read(this.getClass().getResource(imagePathOrUrl));
 		} catch (IOException e) {
